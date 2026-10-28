@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>靈感碰撞所 - 隨機物品組合發明工作坊</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+            display: ['Fredoka', '"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              accent: '#ff6b6b',
+              purple: '#8b5cf6',
+              mint: '#10b981',
+              sky: '#0ea5e9'
+            }
+          },
+          boxShadow: {
+            'bouncy': '0 8px 0 0 rgba(0,0,0,0.15)',
+            'bouncy-sm': '0 4px 0 0 rgba(0,0,0,0.12)',
+            'card': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background-color: #f8fafc;
+      background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+
+    /* 彈跳按鈕效果 */
+    .btn-bounce {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-bounce:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 0 rgba(0,0,0,0.15) !important;
+    }
+
+    /* 卡片翻轉 / 翻開動畫 */
+    @keyframes slotSpin {
+      0% { transform: translateY(-20px) scale(0.9); opacity: 0; }
+      50% { transform: translateY(10px) scale(1.05); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: slotSpin 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Canvas 防手指捲動 */
+    canvas {
+      touch-action: none;
+    }
+
+    /* 自訂捲軸 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Header 頂部導覽列 -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 text-slate-900 w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xl shadow-bouncy-sm border-2 border-slate-900">
+          <i class="fa-solid fa-lightbulb"></i>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-xl leading-none text-slate-900 tracking-wide">靈感碰撞所</h1>
+          <p class="text-xs text-slate-500 font-medium">Invention Lab • 跨界腦洞發明產生器</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="#gallery-section" class="px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition flex items-center gap-1.5">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>發明博物館</span>
+          <span id="saved-count" class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區域 -->
+  <main class="max-w-6xl mx-auto px-4 py-8 flex-grow w-full space-y-10">
+
+    <!-- 階段 1：主題選擇與隨機物品碰撞區 -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border-2 border-slate-900 shadow-bouncy relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-40 h-40 bg-amber-100 rounded-full blur-2xl -z-0 pointer-events-none"></div>
+      
+      <!-- 主題切換 Tab -->
+      <div class="relative z-10 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <span>1. 選擇兩個靈感領域</span>
+              <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">隨機組合</span>
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">物品 A 與物品 B 可以各自從不同主題抽取，也可以選擇「全領域隨機」。</p>
+          </div>
+        </div>
+
+        <!-- A、B 個別主題選擇 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span class="w-8 h-8 rounded-xl bg-amber-200 text-amber-900 font-black flex items-center justify-center">A</span>
+            <span class="flex-grow">
+              <span class="block text-xs font-bold text-amber-900">物品 A 的主題</span>
+              <select id="category-a-select" class="mt-1 w-full bg-white border border-amber-200 rounded-lg px-2 py-1.5 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"></select>
+            </span>
+          </label>
+          <label class="bg-purple-50 border-2 border-purple-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span class="w-8 h-8 rounded-xl bg-purple-200 text-purple-900 font-black flex items-center justify-center">B</span>
+            <span class="flex-grow">
+              <span class="block text-xs font-bold text-purple-900">物品 B 的主題</span>
+              <select id="category-b-select" class="mt-1 w-full bg-white border border-purple-200 rounded-lg px-2 py-1.5 text-sm font-bold text-slate-700 outline-none focus:border-purple-500"></select>
+            </span>
+          </label>
+        </div>
+
+        <!-- 物品抽卡與顯示區 -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center pt-2">
+          
+          <!-- 物件 A 卡片 -->
+          <div class="md:col-span-5 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-slate-900 rounded-2xl p-6 relative shadow-sm group">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-black tracking-wider uppercase bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-md border border-amber-400">物品 A · <span id="item-a-category">全領域隨機</span></span>
+              <button id="reroll-a-btn" title="單獨重抽物品 A" class="text-slate-400 hover:text-slate-800 text-xs flex items-center gap-1 bg-white hover:bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 transition">
+                <i class="fa-solid fa-rotate-right"></i> 重抽
+              </button>
+            </div>
+            <div id="card-a-content" class="text-center py-4 space-y-2 animate-pop">
+              <div id="item-a-emoji" class="text-6xl sm:text-7xl drop-shadow-md select-none transform group-hover:scale-110 transition">☂️</div>
+              <h3 id="item-a-name" class="text-xl sm:text-2xl font-black text-slate-900">摺疊雨傘</h3>
+              <p id="item-a-desc" class="text-xs text-slate-500 max-w-xs mx-auto">能隨意收納與撐開，具有防風防水雨布與骨架結構。</p>
+            </div>
+          </div>
+
+          <!-- 碰撞符號 / 抽取大按鈕 -->
+          <div class="md:col-span-2 flex flex-col items-center justify-center gap-3">
+            <div class="w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center font-black text-xl shadow-md select-none">
+              <i class="fa-solid fa-xmark text-amber-400"></i>
+            </div>
+            <button id="generate-btn" class="btn-bounce w-full bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-900 font-black py-3 px-4 rounded-2xl border-2 border-slate-900 shadow-bouncy-sm flex items-center justify-center gap-2 transition text-base">
+              <i class="fa-solid fa-dice text-lg"></i>
+              <span>隨機碰撞！</span>
+            </button>
+          </div>
+
+          <!-- 物件 B 卡片 -->
+          <div class="md:col-span-5 bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-slate-900 rounded-2xl p-6 relative shadow-sm group">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-black tracking-wider uppercase bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-md border border-purple-400">物品 B · <span id="item-b-category">全領域隨機</span></span>
+              <button id="reroll-b-btn" title="單獨重抽物品 B" class="text-slate-400 hover:text-slate-800 text-xs flex items-center gap-1 bg-white hover:bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 transition">
+                <i class="fa-solid fa-rotate-right"></i> 重抽
+              </button>
+            </div>
+            <div id="card-b-content" class="text-center py-4 space-y-2 animate-pop">
+              <div id="item-b-emoji" class="text-6xl sm:text-7xl drop-shadow-md select-none transform group-hover:scale-110 transition">🥁</div>
+              <h3 id="item-b-name" class="text-xl sm:text-2xl font-black text-slate-900">大鼓</h3>
+              <p id="item-b-desc" class="text-xs text-slate-500 max-w-xs mx-auto">具有厚實鼓面與共鳴腔體，敲擊能發出震撼低音。</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 階段 2：靈感工作坊 (Invention Studio) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border-2 border-slate-900 shadow-bouncy space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+        <div>
+          <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <span>2. 發明工作坊</span>
+            <span class="text-xs font-normal text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">Invention Studio</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">發揮想像力！將這兩個物品的功能、外型或原理結合，設計出專屬新品。</p>
+        </div>
+        <button id="clear-form-btn" class="text-xs text-slate-400 hover:text-rose-500 flex items-center gap-1 self-start sm:self-auto transition">
+          <i class="fa-solid fa-trash-can"></i> 清空內容
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左側：發明基本資訊設定 -->
+        <div class="lg:col-span-6 space-y-5">
+          
+          <!-- 發明名稱 -->
+          <div>
+            <label for="invention-title" class="block text-sm font-bold text-slate-800 mb-1.5">
+              💡 發明/作品名稱 <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="invention-title" placeholder="例如：響韻節奏折疊雨傘、防雨便攜大鼓... " 
+                   class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:ring-0 outline-none text-slate-800 font-bold placeholder:font-normal placeholder:text-slate-400 transition">
+          </div>
+
+          <!-- 發明類別 -->
+          <div>
+            <label class="block text-sm font-bold text-slate-800 mb-1.5">🎨 作品型態</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="type-selector">
+              <button type="button" data-type="實體產品" class="type-btn active bg-amber-100 border-2 border-amber-400 text-amber-900 py-2 px-3 rounded-xl text-xs font-bold transition text-center">
+                🛠️ 實體產品
+              </button>
+              <button type="button" data-type="虛擬/數位" class="type-btn bg-slate-50 border-2 border-slate-200 text-slate-600 py-2 px-3 rounded-xl text-xs font-bold transition text-center hover:bg-slate-100">
+                📱 虛擬/數位
+              </button>
+              <button type="button" data-type="繪圖/創作" class="type-btn bg-slate-50 border-2 border-slate-200 text-slate-600 py-2 px-3 rounded-xl text-xs font-bold transition text-center hover:bg-slate-100">
+                🎨 繪圖/創作
+              </button>
+              <button type="button" data-type="故事/世界觀" class="type-btn bg-slate-50 border-2 border-slate-200 text-slate-600 py-2 px-3 rounded-xl text-xs font-bold transition text-center hover:bg-slate-100">
+                📖 故事/世界觀
+              </button>
+            </div>
+          </div>
+
+          <!-- 核心功能與原理描述 -->
+          <div>
+            <label for="invention-idea" class="block text-sm font-bold text-slate-800 mb-1.5">
+              🚀 核心概念與連結邏輯
+            </label>
+            <textarea id="invention-idea" rows="4" placeholder="描述這兩樣東西是如何結合的？有什麼功能、使用情境或是特別之處？" 
+                      class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:ring-0 outline-none text-sm text-slate-800 placeholder:text-slate-400 transition leading-relaxed resize-none"></textarea>
+          </div>
+
+          <!-- 靈感引導小提示 -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-1">
+            <span class="font-bold text-amber-600 flex items-center gap-1">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 發想小技巧：
+            </span>
+            <p>1. **外觀結合**：把 A 的外形用到 B 的結構上。</p>
+            <p>2. **功能反轉**：用 A 的運作機制來解決 B 領域的問題。</p>
+            <p>3. **情境融合**：想像在什麼奇葩情境下，需要同時具備這兩者的能力？</p>
+          </div>
+
+        </div>
+
+        <!-- 右側：簡易設計草圖塗鴉板 (HTML5 Canvas) -->
+        <div class="lg:col-span-6 flex flex-col">
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-sm font-bold text-slate-800">
+              ✏️ 繪製設計草圖 (Doodle Canvas)
+            </label>
+            <span class="text-xs text-slate-400">畫出你的神祕發明！</span>
+          </div>
+
+          <!-- Canvas 容器區塊 -->
+          <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-2 flex-grow flex flex-col space-y-2">
+            <div class="relative w-full h-64 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-inner flex-grow">
+              <canvas id="doodle-canvas" class="w-full h-full cursor-crosshair"></canvas>
+            </div>
+
+            <!-- 畫筆工具列 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
+              <!-- 調色盤 -->
+              <div class="flex items-center gap-1.5">
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-slate-900 ring-2 ring-slate-900 border border-white" data-color="#0f172a"></button>
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-rose-500 hover:scale-105 border border-white" data-color="#f43f5e"></button>
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-amber-500 hover:scale-105 border border-white" data-color="#f59e0b"></button>
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-emerald-500 hover:scale-105 border border-white" data-color="#10b981"></button>
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-sky-500 hover:scale-105 border border-white" data-color="#0ea5e9"></button>
+                <button type="button" class="color-picker w-6 h-6 rounded-full bg-purple-500 hover:scale-105 border border-white" data-color="#a855f7"></button>
+              </div>
+
+              <!-- 筆刷大小與擦除 -->
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs">
+                  <span class="text-slate-400">筆粗:</span>
+                  <button type="button" class="stroke-btn px-1.5 py-0.5 rounded font-bold hover:bg-slate-100" data-size="3">細</button>
+                  <button type="button" class="stroke-btn px-1.5 py-0.5 rounded font-bold bg-slate-200 text-slate-800" data-size="6">中</button>
+                  <button type="button" class="stroke-btn px-1.5 py-0.5 rounded font-bold hover:bg-slate-100" data-size="12">粗</button>
+                </div>
+                
+                <button type="button" id="eraser-btn" class="px-2 py-1 text-xs font-bold bg-white text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1 transition">
+                  <i class="fa-solid fa-eraser"></i> 橡皮擦
+                </button>
+                <button type="button" id="clear-canvas-btn" class="px-2 py-1 text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg border border-rose-200 flex items-center gap-1 transition">
+                  <i class="fa-solid fa-arrows-rotate"></i> 重來
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 儲存發明按鈕 -->
+      <div class="pt-4 border-t border-slate-100 flex justify-end">
+        <button id="save-invention-btn" class="btn-bounce w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold py-3.5 px-8 rounded-2xl border-2 border-slate-900 shadow-bouncy flex items-center justify-center gap-2 text-base transition">
+          <i class="fa-solid fa-floppy-disk text-lg"></i>
+          <span>儲存這項新發明！</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 階段 3：發明博物館 / 我的歷程庫 (History Gallery) -->
+    <section id="gallery-section" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <span>🏆 發明博物館</span>
+            <span class="text-xs font-normal text-slate-500">Invention Gallery</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500">查看你所創造的所有腦洞大開靈感作品。</p>
+        </div>
+        
+        <!-- 清空所有作品 -->
+        <button id="clear-all-gallery-btn" class="text-xs text-slate-400 hover:text-rose-500 flex items-center gap-1 transition">
+          <i class="fa-solid fa-trash"></i> 清空所有資料
+        </button>
+      </div>
+
+      <!-- 展覽卡片網格 -->
+      <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- JS 將在此處加入動態生成的發明卡片 -->
+      </div>
+
+      <!-- 無資料時顯示 -->
+      <div id="empty-gallery-state" class="bg-white rounded-3xl p-12 border-2 border-dashed border-slate-300 text-center space-y-3">
+        <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-2xl mx-auto border border-amber-200">
+          <i class="fa-solid fa-box-open"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-700">博物館目前還是空的喔！</h3>
+        <p class="text-xs text-slate-400 max-w-sm mx-auto">點擊上面的「隨機碰撞」按鈕組合物品，並發揮靈感寫下你的第一個原創發明吧！</p>
+      </div>
+    </section>
+
+    <!-- 主題與物品管理庫：置於頁面底部 -->
+    <section id="library-section" class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-300 shadow-card space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">📚 主題與物品庫</h2>
+          <p class="text-xs text-slate-500 mt-0.5">點開主題即可查看物品；自訂資料會保存在此瀏覽器。</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-3">
+          <div id="category-library" class="space-y-2"></div>
+        </div>
+        <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+          <form id="add-category-form" class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+            <h3 class="text-sm font-black text-slate-900">新增主題</h3>
+            <input id="new-category-name" required maxlength="24" placeholder="例如：交通工具" class="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-500">
+            <button class="btn-bounce w-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold py-2 rounded-lg border border-slate-900 text-xs" type="submit"><i class="fa-solid fa-plus"></i> 新增主題</button>
+          </form>
+
+          <form id="add-item-form" class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-2">
+            <h3 class="text-sm font-black text-slate-900">新增物品</h3>
+            <select id="item-category-select" required class="w-full px-3 py-2 rounded-lg border border-sky-200 bg-white text-sm outline-none focus:border-sky-500"></select>
+            <div class="grid grid-cols-4 gap-2">
+              <input id="new-item-emoji" maxlength="8" placeholder="✨" aria-label="物品表情" class="col-span-1 px-2 py-2 rounded-lg border border-sky-200 bg-white text-center outline-none focus:border-sky-500">
+              <input id="new-item-name" required maxlength="30" placeholder="物品名稱" class="col-span-3 px-3 py-2 rounded-lg border border-sky-200 bg-white text-sm outline-none focus:border-sky-500">
+            </div>
+            <button class="btn-bounce w-full bg-sky-500 hover:bg-sky-400 text-white font-bold py-2 rounded-lg border border-slate-900 text-xs" type="submit"><i class="fa-solid fa-plus"></i> 加入物品</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 提示訊息 Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-2 transition-all duration-300 transform translate-y-20 opacity-0 z-50 border-2 border-amber-400">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-amber-400 text-lg"></i>
+    <span id="toast-msg">已儲存成功！</span>
+  </div>
+
+  <!-- Footer 頁腳 -->
+  <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-center text-xs text-slate-400">
+    <p>靈感碰撞所 Invention Lab • 讓創意無界限連結</p>
+  </footer>
+
+  <!-- 主要邏輯程式碼 -->
+  <script>
+    // ------------------------------------------------------------------
+    // 1. 資料庫 (Themes & Categories)
+    // ------------------------------------------------------------------
+    let categoriesData = [
+      {
+        id: "all",
+        name: "全領域隨機",
+        icon: "fa-solid fa-wand-magic-sparkles",
+        items: [] // 動態整合全部
+      },
+      {
+        id: "household",
+        name: "生活用品",
+        icon: "fa-solid fa-house",
+        items: [
+          { name: "摺疊雨傘", emoji: "☂️", desc: "能隨意收納與撐開，具有防風防水雨布與骨架結構。" },
+          { name: "馬克杯", emoji: "☕", desc: "厚實單柄陶瓷杯，盛裝溫熱液體與保溫。" },
+          { name: "掃地機器人", emoji: "🤖", desc: "能自主移動、感應障礙物並吸取灰塵的地板清理裝置。" },
+          { name: "曬衣夾", emoji: "🧺", desc: "具有彈簧夾緊力，能牢牢固定物品的小工具。" },
+          { name: "保溫瓶", emoji: "🍼", desc: "雙層真空結構，能長時間保持內部液體溫度。" },
+          { name: "鬧鐘", emoji: "⏰", desc: "設定指定時間發出大分貝響鈴或震動的提示裝置。" },
+          { name: "指甲剪", emoji: "✂️", desc: "槓桿原理的微型金屬刃具，精準修剪邊角。" }
+        ]
+      },
+      {
+        id: "food",
+        name: "美食餐飲",
+        icon: "fa-solid fa-utensils",
+        items: [
+          { name: "珍珠奶茶", emoji: "🧋", desc: "含有香甜奶茶與軟Q黑糖珍珠沉底的流行飲品。" },
+          { name: "烤吐司機", emoji: "🍞", desc: "加熱電熱絲將吐司烘烤至酥脆並自動彈出的家電。" },
+          { name: "拉麵", emoji: "🍜", desc: "包含濃郁湯頭、Q彈麵條與豐富配料的熱騰騰麵食。" },
+          { name: "辣椒醬", emoji: "🌶️", desc: "具有強烈辛辣感與刺激香氣的液態調味品。" },
+          { name: "冰淇淋甜筒", emoji: "🍦", desc: "冰涼綿密雪糕配上酥脆餅乾角錐。" },
+          { name: "爆米花", emoji: "🍿", desc: "玉米粒經高溫爆開的高膨鬆度酥脆零食。" }
+        ]
+      },
+      {
+        id: "instruments",
+        name: "樂器",
+        icon: "fa-solid fa-music",
+        items: [
+          { name: "大鼓", emoji: "🥁", desc: "具有厚實鼓面與共鳴腔體，敲擊能發出震撼低音。" },
+          { name: "吉他", emoji: "🎸", desc: "具有六根琴弦與共鳴箱體，透過撥弦發聲的樂器。" },
+          { name: "鋼琴", emoji: "🎹", desc: "透過按鍵帶動琴槌敲擊琴弦，能演奏出豐富音域的鍵盤樂器。" },
+          { name: "小提琴", emoji: "🎻", desc: "以琴弓摩擦四條琴弦發聲，音色細膩而富有表情的弦樂器。" },
+          { name: "長笛", emoji: "🪈", desc: "利用吹入空氣在管身中共鳴，發出清亮高音的管樂器。" },
+          { name: "烏克麗麗", emoji: "🎶", desc: "琴身小巧、四條尼龍弦，能彈出輕快明亮旋律的撥弦樂器。" }
+        ]
+      },
+      {
+        id: "animals",
+        name: "動物",
+        icon: "fa-solid fa-paw",
+        items: [
+          { name: "貓咪", emoji: "🐱", desc: "身體極度柔軟、善於跳躍且具有強烈好奇心的靈動動物。" },
+          { name: "水母", emoji: "🪼", desc: "透明水母體，在水中悠游並帶有觸手微電感。" },
+          { name: "變色龍", emoji: "🦎", desc: "能根據環境與情緒瞬間改變皮膚顏色的爬蟲類。" },
+          { name: "螢火蟲", emoji: "🪲", desc: "尾部能進行生物發光，在夜間閃爍冷光訊號。" },
+          { name: "章魚", emoji: "🐙", desc: "擁有八條靈活腕足，能噴墨、變換質感並穿越狹小空間的海洋動物。" },
+          { name: "企鵝", emoji: "🐧", desc: "穿著黑白羽毛外衣、擅長在冰冷海水中游泳的群居鳥類。" },
+          { name: "蜜蜂", emoji: "🐝", desc: "能在花朵間採蜜、以舞蹈傳遞方向，並構築六角蜂巢的昆蟲。" }
+        ]
+      },
+      {
+        id: "future",
+        name: "科幻未來",
+        icon: "fa-solid fa-rocket",
+        items: [
+          { name: "太空人頭盔", emoji: "👨‍🚀", desc: "具備獨立供氧系統與面罩防護的極限環境裝備。" },
+          { name: "時空門", emoji: "🌀", desc: "能瞬間將物質進行空間扭曲與傳送的物理奇點。" },
+          { name: "反重力懸浮滑板", emoji: "🛹", desc: "擺脫地面摩擦力，可在半空中滑行的未來載具。" },
+          { name: "全息投影儀", emoji: "🔮", desc: "在空氣中投射出三維光線圖像的無實體顯示器。" },
+          { name: "雷射光劍", emoji: "⚔️", desc: "由高能等離子光束組成的近戰切割武器。" },
+          { name: "記憶提取器", emoji: "🧠", desc: "能讀取並將腦中記憶檔案化輸出的高科技裝置。" }
+        ]
+      }
+    ];
+
+    const defaultCategories = JSON.parse(JSON.stringify(categoriesData));
+
+    function rebuildAllItems() {
+      const allCategory = categoriesData.find(cat => cat.id === "all");
+      if (allCategory) {
+        allCategory.items = categoriesData
+          .filter(cat => cat.id !== "all")
+          .flatMap(cat => cat.items);
+      }
+    }
+
+    rebuildAllItems();
+
+    // ------------------------------------------------------------------
+    // 2. 全域狀態 (State)
+    // ------------------------------------------------------------------
+    let currentCategoryAId = "all";
+    let currentCategoryBId = "all";
+    let currentItemA = categoriesData[0].items[0]; // 折疊雨傘
+    let currentItemB = categoriesData[2].items[0]; // 大鼓
+    let selectedType = "實體產品";
+    let savedInventions = [];
+
+    // ------------------------------------------------------------------
+    // 3. DOM 元素綁定
+    // ------------------------------------------------------------------
+    const categoryASelect = document.getElementById("category-a-select");
+    const categoryBSelect = document.getElementById("category-b-select");
+    const generateBtn = document.getElementById("generate-btn");
+    const rerollABtn = document.getElementById("reroll-a-btn");
+    const rerollBBtn = document.getElementById("reroll-b-btn");
+
+    const cardAContent = document.getElementById("card-a-content");
+    const itemAName = document.getElementById("item-a-name");
+    const itemAEmoji = document.getElementById("item-a-emoji");
+    const itemADesc = document.getElementById("item-a-desc");
+    const itemACategory = document.getElementById("item-a-category");
+
+    const cardBContent = document.getElementById("card-b-content");
+    const itemBName = document.getElementById("item-b-name");
+    const itemBEmoji = document.getElementById("item-b-emoji");
+    const itemBDesc = document.getElementById("item-b-desc");
+    const itemBCategory = document.getElementById("item-b-category");
+
+    const categoryLibrary = document.getElementById("category-library");
+    const addCategoryForm = document.getElementById("add-category-form");
+    const newCategoryNameInput = document.getElementById("new-category-name");
+    const addItemForm = document.getElementById("add-item-form");
+    const itemCategorySelect = document.getElementById("item-category-select");
+    const newItemEmojiInput = document.getElementById("new-item-emoji");
+    const newItemNameInput = document.getElementById("new-item-name");
+
+    const inventionTitleInput = document.getElementById("invention-title");
+    const inventionIdeaInput = document.getElementById("invention-idea");
+    const typeSelectorBtns = document.querySelectorAll(".type-btn");
+    const saveInventionBtn = document.getElementById("save-invention-btn");
+    const clearFormBtn = document.getElementById("clear-form-btn");
+
+    const galleryGrid = document.getElementById("gallery-grid");
+    const emptyGalleryState = document.getElementById("empty-gallery-state");
+    const savedCountBadge = document.getElementById("saved-count");
+    const clearAllGalleryBtn = document.getElementById("clear-all-gallery-btn");
+
+    const toast = document.getElementById("toast");
+    const toastMsg = document.getElementById("toast-msg");
+
+    // Canvas DOM
+    const canvas = document.getElementById("doodle-canvas");
+    const ctx = canvas.getContext("2d");
+    const colorPickers = document.querySelectorAll(".color-picker");
+    const strokeBtns = document.querySelectorAll(".stroke-btn");
+    const eraserBtn = document.getElementById("eraser-btn");
+    const clearCanvasBtn = document.getElementById("clear-canvas-btn");
+
+    // Canvas 繪圖狀態
+    let isDrawing = false;
+    let currentColor = "#0f172a";
+    let currentLineWidth = 6;
+    let isEraser = false;
+
+    // ------------------------------------------------------------------
+    // 4. 初始化應用程式 (Init)
+    // ------------------------------------------------------------------
+    function init() {
+      loadCategories();
+      renderCategorySelectors();
+      renderCategoryLibrary();
+      generatePair();
+      setupCanvas();
+      loadLocalStorage();
+      bindEvents();
+    }
+
+    function getCategoryById(id) {
+      return categoriesData.find(cat => cat.id === id) || categoriesData[0];
+    }
+
+    function getCategoryName(id) {
+      return getCategoryById(id).name;
+    }
+
+    function renderCategorySelectors() {
+      const options = categoriesData.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      const itemOptions = categoriesData
+        .filter(cat => cat.id !== "all")
+        .map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`)
+        .join('');
+
+      categoryASelect.innerHTML = options;
+      categoryBSelect.innerHTML = options;
+      itemCategorySelect.innerHTML = itemOptions;
+      categoryASelect.value = currentCategoryAId;
+      categoryBSelect.value = currentCategoryBId;
+    }
+
+    function renderCategoryLibrary() {
+      const categories = categoriesData.filter(cat => cat.id !== "all");
+      categoryLibrary.innerHTML = categories.map(cat => `
+        <details class="bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden">
+          <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-3 font-bold text-slate-800 hover:bg-slate-100">
+            <span class="flex items-center gap-2"><i class="${cat.icon}"></i> ${escapeHtml(cat.name)}</span>
+            <span class="text-xs bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full">${cat.items.length} 件</span>
+          </summary>
+          <div class="border-t border-slate-200 p-3 space-y-2">
+            ${cat.items.length ? cat.items.map((item, index) => `
+              <div class="bg-white border border-slate-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                <span class="text-xl leading-5">${escapeHtml(item.emoji || "💡")}</span>
+                <strong class="flex-grow min-w-0 text-sm text-slate-800">${escapeHtml(item.name)}</strong>
+                <button type="button" class="delete-item-btn text-slate-300 hover:text-rose-500 p-1" data-cat-id="${cat.id}" data-item-index="${index}" title="刪除此物品"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            `).join('') : '<p class="text-xs text-slate-400 p-2">這個主題還沒有物品，從右側加入第一件吧！</p>'}
+            <button type="button" class="delete-category-btn text-xs text-slate-400 hover:text-rose-500 mt-1" data-cat-id="${cat.id}"><i class="fa-solid fa-trash-can"></i> 刪除主題</button>
+          </div>
+        </details>
+      `).join('');
+    }
+
+    function saveCategories() {
+      const customData = categoriesData.filter(cat => cat.id !== "all");
+      localStorage.setItem("invention_lab_categories", JSON.stringify(customData));
+    }
+
+    function loadCategories() {
+      const data = localStorage.getItem("invention_lab_categories");
+      if (data) {
+        try {
+          const savedCategories = JSON.parse(data);
+          if (Array.isArray(savedCategories) && savedCategories.length > 0) {
+            categoriesData = [JSON.parse(JSON.stringify(defaultCategories[0])), ...savedCategories]
+              .filter(cat => cat && typeof cat.id === "string" && typeof cat.name === "string" && Array.isArray(cat.items))
+              .map(cat => ({ ...cat, icon: cat.icon || "fa-solid fa-shapes", items: cat.items.filter(item => item && item.name) }));
+          }
+        } catch (e) {
+          categoriesData = JSON.parse(JSON.stringify(defaultCategories));
+        }
+      }
+      rebuildAllItems();
+    }
+
+    // ------------------------------------------------------------------
+    // 5. 隨機抽取邏輯 (Random Pair Logic)
+    // ------------------------------------------------------------------
+    function getRandomItem(pool, excludeName = null) {
+      if (!pool || pool.length === 0) return null;
+      let filtered = pool;
+      if (excludeName) {
+        filtered = pool.filter(item => item.name !== excludeName);
+      }
+      if (filtered.length === 0) return pool[0];
+      const randomIndex = Math.floor(Math.random() * filtered.length);
+      return filtered[randomIndex];
+    }
+
+    function getPool(categoryId) {
+      return getCategoryById(categoryId).items;
+    }
+
+    function generatePair() {
+      const poolA = getPool(currentCategoryAId);
+      const poolB = getPool(currentCategoryBId);
+      let itemA = getRandomItem(poolA);
+      let itemB = getRandomItem(poolB, currentCategoryAId === currentCategoryBId && itemA ? itemA.name : null);
+
+      if (!itemA || !itemB) {
+        showToast("選擇的主題目前沒有物品，請先到物品庫新增內容！", "fa-circle-info", "text-sky-400");
+        return;
+      }
+
+      // 動畫觸發
+      triggerCardAnimation(cardAContent);
+      triggerCardAnimation(cardBContent);
+
+      currentItemA = itemA;
+      currentItemB = itemB;
+
+      updateCardUI();
+    }
+
+    function rerollItem(isA) {
+      if (isA) {
+        const item = getRandomItem(getPool(currentCategoryAId), currentCategoryAId === currentCategoryBId ? currentItemB.name : null);
+        if (!item) return showToast("這個主題還沒有物品，請先新增內容！", "fa-circle-info", "text-sky-400");
+        currentItemA = item;
+        triggerCardAnimation(cardAContent);
+      } else {
+        const item = getRandomItem(getPool(currentCategoryBId), currentCategoryAId === currentCategoryBId ? currentItemA.name : null);
+        if (!item) return showToast("這個主題還沒有物品，請先新增內容！", "fa-circle-info", "text-sky-400");
+        currentItemB = item;
+        triggerCardAnimation(cardBContent);
+      }
+      updateCardUI();
+    }
+
+    function triggerCardAnimation(element) {
+      element.classList.remove('animate-pop');
+      void element.offsetWidth; // 強制重繪
+      element.classList.add('animate-pop');
+    }
+
+    function updateCardUI() {
+      if (!currentItemA || !currentItemB) return;
+      itemAName.textContent = currentItemA.name;
+      itemAEmoji.textContent = currentItemA.emoji;
+      itemADesc.textContent = currentItemA.desc || "";
+      itemADesc.classList.toggle("hidden", !currentItemA.desc);
+      itemACategory.textContent = getCategoryName(currentCategoryAId);
+
+      itemBName.textContent = currentItemB.name;
+      itemBEmoji.textContent = currentItemB.emoji;
+      itemBDesc.textContent = currentItemB.desc || "";
+      itemBDesc.classList.toggle("hidden", !currentItemB.desc);
+      itemBCategory.textContent = getCategoryName(currentCategoryBId);
+    }
+
+    // ------------------------------------------------------------------
+    // 6. Canvas 塗鴉板控制 (Doodle Canvas)
+    // ------------------------------------------------------------------
+    function setupCanvas() {
+      // 依據 CSS 寬高動態修正內部繪圖解析度
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        // 清空重繪時設定背景為白色
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      // 繪圖事件監聽
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        }
+
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top
+        };
+      }
+
+      function startDrawing(e) {
+        isDrawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+
+        ctx.strokeStyle = isEraser ? "#ffffff" : currentColor;
+        ctx.lineWidth = currentLineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      }
+
+      function stopDrawing() {
+        if (isDrawing) {
+          ctx.closePath();
+          isDrawing = false;
+        }
+      }
+
+      // Mouse Events
+      canvas.addEventListener("mousedown", startDrawing);
+      canvas.addEventListener("mousemove", draw);
+      canvas.addEventListener("mouseup", stopDrawing);
+      canvas.addEventListener("mouseleave", stopDrawing);
+
+      // Touch Events (Mobile)
+      canvas.addEventListener("touchstart", startDrawing);
+      canvas.addEventListener("touchmove", draw);
+      canvas.addEventListener("touchend", stopDrawing);
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ------------------------------------------------------------------
+    // 7. 發明儲存與歷程展示 (LocalStorage & Gallery)
+    // ------------------------------------------------------------------
+    function saveInvention() {
+      const title = inventionTitleInput.value.trim();
+      const idea = inventionIdeaInput.value.trim();
+
+      if (!title) {
+        showToast("請輸入你的發明/作品名稱！", "fa-triangle-exclamation", "text-amber-400");
+        inventionTitleInput.focus();
+        return;
+      }
+
+      // 將 Canvas 轉為 Base64 圖片
+      const doodleImage = canvas.toDataURL("image/png");
+
+      const newInvention = {
+        id: Date.now(),
+        title: title,
+        type: selectedType,
+        idea: idea || "（發明者留下了神祕無言的精彩作品）",
+        itemA: { name: currentItemA.name, emoji: currentItemA.emoji },
+        itemB: { name: currentItemB.name, emoji: currentItemB.emoji },
+        doodle: doodleImage,
+        createdAt: new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      };
+
+      savedInventions.unshift(newInvention);
+      updateLocalStorage();
+      renderGallery();
+
+      showToast("成功發表新發明！已收錄進博物館", "fa-circle-check", "text-emerald-400");
+
+      // 清空表單
+      resetForm();
+
+      // 滾動到博物館區
+      document.getElementById("gallery-section").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      inventionTitleInput.value = "";
+      inventionIdeaInput.value = "";
+      clearCanvas();
+    }
+
+    function deleteInvention(id) {
+      savedInventions = savedInventions.filter(item => item.id !== id);
+      updateLocalStorage();
+      renderGallery();
+      showToast("已從博物館移除作品", "fa-trash", "text-rose-400");
+    }
+
+    function renderGallery() {
+      savedCountBadge.textContent = savedInventions.length;
+
+      if (savedInventions.length === 0) {
+        emptyGalleryState.classList.remove("hidden");
+        galleryGrid.innerHTML = "";
+        return;
+      }
+
+      emptyGalleryState.classList.add("hidden");
+
+      galleryGrid.innerHTML = savedInventions.map(item => {
+        return `
+          <div class="bg-white border-2 border-slate-900 rounded-2xl p-5 shadow-bouncy-sm flex flex-col justify-between space-y-4 hover:shadow-md transition">
+            
+            <div class="space-y-3">
+              <!-- 組合與時間標籤 -->
+              <div class="flex items-center justify-between text-xs">
+                <span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-md font-bold">
+                  ${item.itemA.emoji} ${item.itemA.name} × ${item.itemB.emoji} ${item.itemB.name}
+                </span>
+                <span class="text-slate-400">${item.createdAt}</span>
+              </div>
+
+              <!-- 草圖圖片展示 -->
+              <div class="w-full h-44 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center relative">
+                <img src="${item.doodle}" alt="${item.title}" class="object-contain w-full h-full">
+                <span class="absolute bottom-2 right-2 text-[10px] bg-slate-900/80 text-white px-2 py-0.5 rounded-full font-bold">
+                  ${item.type}
+                </span>
+              </div>
+
+              <!-- 作品名稱與敘述 -->
+              <div>
+                <h3 class="text-lg font-black text-slate-900">${escapeHtml(item.title)}</h3>
+                <p class="text-xs text-slate-600 mt-1 line-clamp-3 leading-relaxed">${escapeHtml(item.idea)}</p>
+              </div>
+            </div>
+
+            <!-- 卡片底部操作列 -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button onclick="copyInventionText(${item.id})" class="text-xs font-bold text-slate-600 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 px-3 py-1.5 rounded-lg border border-slate-200 transition flex items-center gap-1">
+                <i class="fa-regular fa-copy"></i> 複製文字
+              </button>
+              
+              <button onclick="deleteInvention(${item.id})" class="text-xs text-slate-400 hover:text-rose-500 p-1.5 transition" title="刪除作品">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 複製作品文字到剪貼簿 (標準 fallback 相容性寫法)
+    window.copyInventionText = function(id) {
+      const item = savedInventions.find(i => i.id === id);
+      if (!item) return;
+
+      const text = `💡【我的原創發明】：${item.title}\n🧩【組合靈感】：${item.itemA.name} × ${item.itemB.name}\n🎨【作品型態】：${item.type}\n🚀【核心概念】：${item.idea}`;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast("已將作品簡介複製到剪貼簿！", "fa-copy", "text-amber-400");
+      } catch (err) {
+        showToast("複製失敗，請手動複製", "fa-triangle-exclamation", "text-rose-400");
+      }
+      document.body.removeChild(textarea);
+    };
+
+    window.deleteInvention = deleteInvention;
+
+    function loadLocalStorage() {
+      const data = localStorage.getItem("invention_lab_saved");
+      if (data) {
+        try {
+          savedInventions = JSON.parse(data);
+        } catch (e) {
+          savedInventions = [];
+        }
+      }
+      renderGallery();
+    }
+
+    function updateLocalStorage() {
+      localStorage.setItem("invention_lab_saved", JSON.stringify(savedInventions));
+    }
+
+    // 防範 HTML 注入 XSS
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // ------------------------------------------------------------------
+    // 8. 主題與物品庫管理
+    // ------------------------------------------------------------------
+    function refreshCategoryData() {
+      rebuildAllItems();
+      if (!categoriesData.some(cat => cat.id === currentCategoryAId)) currentCategoryAId = "all";
+      if (!categoriesData.some(cat => cat.id === currentCategoryBId)) currentCategoryBId = "all";
+      saveCategories();
+      renderCategorySelectors();
+      renderCategoryLibrary();
+    }
+
+    function addCategory(name) {
+      const trimmedName = name.trim();
+      const duplicate = categoriesData.some(cat => cat.name.toLocaleLowerCase() === trimmedName.toLocaleLowerCase());
+      if (!trimmedName) return;
+      if (duplicate) {
+        showToast("已有同名主題，請換個名稱！", "fa-triangle-exclamation", "text-amber-400");
+        return;
+      }
+
+      const newCategory = {
+        id: `custom-${Date.now()}`,
+        name: trimmedName,
+        icon: "fa-solid fa-shapes",
+        items: []
+      };
+      categoriesData.push(newCategory);
+      refreshCategoryData();
+      itemCategorySelect.value = newCategory.id;
+      newCategoryNameInput.value = "";
+      showToast(`已新增「${trimmedName}」主題`, "fa-folder-plus", "text-emerald-400");
+    }
+
+    function addItem(categoryId, name, emoji) {
+      const category = categoriesData.find(cat => cat.id === categoryId && cat.id !== "all");
+      const trimmedName = name.trim();
+      if (!category || !trimmedName) return;
+      if (category.items.some(item => item.name === trimmedName)) {
+        showToast("這個主題已有同名物品！", "fa-triangle-exclamation", "text-amber-400");
+        return;
+      }
+
+      category.items.push({ name: trimmedName, emoji: emoji.trim() || "💡", desc: "" });
+      refreshCategoryData();
+      itemCategorySelect.value = categoryId;
+      addItemForm.reset();
+      itemCategorySelect.value = categoryId;
+      showToast(`已將「${trimmedName}」加入${category.name}`, "fa-circle-plus", "text-emerald-400");
+    }
+
+    function deleteItem(categoryId, itemIndex) {
+      const category = categoriesData.find(cat => cat.id === categoryId);
+      if (!category || !category.items[itemIndex]) return;
+      const itemName = category.items[itemIndex].name;
+      category.items.splice(itemIndex, 1);
+      refreshCategoryData();
+      showToast(`已移除「${itemName}」`, "fa-trash", "text-rose-400");
+    }
+
+    function deleteCategory(categoryId) {
+      const category = categoriesData.find(cat => cat.id === categoryId);
+      if (!category || categoriesData.filter(cat => cat.id !== "all").length <= 1) {
+        showToast("至少要保留一個主題！", "fa-triangle-exclamation", "text-amber-400");
+        return;
+      }
+      if (!confirm(`確定要刪除「${category.name}」及其中所有物品嗎？`)) return;
+      categoriesData = categoriesData.filter(cat => cat.id !== categoryId);
+      refreshCategoryData();
+      generatePair();
+      showToast(`已刪除「${category.name}」主題`, "fa-trash", "text-rose-400");
+    }
+
+    // ------------------------------------------------------------------
+    // 9. Toast 訊息提示元件
+    // ------------------------------------------------------------------
+    let toastTimer;
+    function showToast(msg, iconClass = "fa-circle-check", iconColorClass = "text-amber-400") {
+      clearTimeout(toastTimer);
+      toastMsg.textContent = msg;
+      
+      const icon = document.getElementById("toast-icon");
+      icon.className = `fa-solid ${iconClass} ${iconColorClass} text-lg`;
+
+      toast.classList.remove("translate-y-20", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+
+      toastTimer = setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 2500);
+    }
+
+    // ------------------------------------------------------------------
+    // 10. 事件監聽設定 (Event Listeners)
+    // ------------------------------------------------------------------
+    function bindEvents() {
+      // A、B 主題獨立選擇
+      categoryASelect.addEventListener("change", () => {
+        currentCategoryAId = categoryASelect.value;
+        rerollItem(true);
+      });
+      categoryBSelect.addEventListener("change", () => {
+        currentCategoryBId = categoryBSelect.value;
+        rerollItem(false);
+      });
+
+      // 新增主題與物品
+      addCategoryForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        addCategory(newCategoryNameInput.value);
+      });
+      addItemForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        addItem(itemCategorySelect.value, newItemNameInput.value, newItemEmojiInput.value);
+      });
+
+      // 物品庫刪除操作
+      categoryLibrary.addEventListener("click", (e) => {
+        const deleteItemButton = e.target.closest(".delete-item-btn");
+        if (deleteItemButton) {
+          deleteItem(deleteItemButton.dataset.catId, Number(deleteItemButton.dataset.itemIndex));
+          return;
+        }
+        const deleteCategoryButton = e.target.closest(".delete-category-btn");
+        if (deleteCategoryButton) {
+          deleteCategory(deleteCategoryButton.dataset.catId);
+        }
+      });
+
+      // 隨機生成與單獨重抽
+      generateBtn.addEventListener("click", generatePair);
+      rerollABtn.addEventListener("click", () => rerollItem(true));
+      rerollBBtn.addEventListener("click", () => rerollItem(false));
+
+      // 作品型態按鈕切換
+      typeSelectorBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          typeSelectorBtns.forEach(b => {
+            b.classList.remove("active", "bg-amber-100", "border-amber-400", "text-amber-900");
+            b.classList.add("bg-slate-50", "border-slate-200", "text-slate-600");
+          });
+          btn.classList.add("active", "bg-amber-100", "border-amber-400", "text-amber-900");
+          btn.classList.remove("bg-slate-50", "border-slate-200", "text-slate-600");
+          selectedType = btn.dataset.type;
+        });
+      });
+
+      // 調色盤選擇
+      colorPickers.forEach(picker => {
+        picker.addEventListener("click", () => {
+          colorPickers.forEach(p => p.classList.remove("ring-2", "ring-slate-900"));
+          picker.classList.add("ring-2", "ring-slate-900");
+          currentColor = picker.dataset.color;
+          isEraser = false;
+          eraserBtn.classList.remove("bg-slate-200", "text-slate-900");
+        });
+      });
+
+      // 筆刷粗細切換
+      strokeBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          strokeBtns.forEach(b => b.classList.remove("bg-slate-200", "text-slate-800"));
+          btn.classList.add("bg-slate-200", "text-slate-800");
+          currentLineWidth = parseInt(btn.dataset.size, 10);
+        });
+      });
+
+      // 橡皮擦按鈕
+      eraserBtn.addEventListener("click", () => {
+        isEraser = !isEraser;
+        if (isEraser) {
+          eraserBtn.classList.add("bg-slate-200", "text-slate-900");
+        } else {
+          eraserBtn.classList.remove("bg-slate-200", "text-slate-900");
+        }
+      });
+
+      // 清空 Canvas
+      clearCanvasBtn.addEventListener("click", clearCanvas);
+
+      // 儲存發明
+      saveInventionBtn.addEventListener("click", saveInvention);
+
+      // 清空表單
+      clearFormBtn.addEventListener("click", () => {
+        resetForm();
+        showToast("已重置表單與繪圖板", "fa-arrow-rotate-left", "text-sky-400");
+      });
+
+      // 清空博物館
+      clearAllGalleryBtn.addEventListener("click", () => {
+        if (savedInventions.length === 0) return;
+        if (confirm("確定要清空發明博物館裡的所有作品嗎？此動作無法復原喔！")) {
+          savedInventions = [];
+          updateLocalStorage();
+          renderGallery();
+          showToast("已清空所有作品", "fa-trash", "text-rose-400");
+        }
+      });
+    }
+
+    // 啟動應用程式
+    window.onload = init;
+  </script>
+</body>
+</html>
